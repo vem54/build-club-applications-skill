@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Club Applications"
+  short_description: "Score Gmail applicants into a local tracker"
+  default_prompt: "Use $build-club-applications to sync and score the latest Build Club applications from Gmail."
