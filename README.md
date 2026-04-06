@@ -44,9 +44,17 @@ By default the helper writes local data to:
 
 These files stay on your machine and are not meant to be committed.
 
+The public repo can publish a sanitized leaderboard at:
+
+```text
+data/public_candidate_rankings.csv
+```
+
+That CSV is meant for sharing progress and rankings without exposing direct contact fields.
+
 ## Privacy
 
-Do not publish your real `candidates.json` file. It can contain applicant names, contact info, and private notes.
+Do not publish your real `candidates.json` file or the full local CSV. They can contain applicant names, contact info, and private notes.
 
 ## Helper Commands
 
@@ -60,6 +68,18 @@ Render the report:
 
 ```bash
 python3 scripts/applications_db.py report
+```
+
+Export the full private CSV:
+
+```bash
+python3 scripts/applications_db.py export-csv
+```
+
+Export a sanitized public CSV:
+
+```bash
+python3 scripts/applications_db.py --csv ./data/public_candidate_rankings.csv export-csv --public
 ```
 
 Update a candidate status:

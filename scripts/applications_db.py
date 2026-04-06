@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
-import re
 import sys
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 
-DATA_DIR = Path.home() / ".local" / "share" / "build-club-applications"
+DATA_DIR = Path("/home/claude/.local/share/build-club-applications")
 DEFAULT_DB_PATH = DATA_DIR / "candidates.json"
 DEFAULT_REPORT_PATH = DATA_DIR / "latest_report.md"
+DEFAULT_CSV_PATH = DATA_DIR / "candidates.csv"
 SCHEMA_VERSION = 1
 
 
@@ -247,6 +249,125 @@ def render_report(db: dict, limit: int = 25) -> str:
     return "\n".join(lines)
 
 
+def csv_cell(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return " | ".join(str(item) for item in value)
+    return str(value)
+
+
+def candidate_rows(candidates: list[dict], public: bool) -> tuple[list[str], list[dict[str, str]]]:
+    if public:
+        headers = [
+            "rank",
+            "candidate_id",
+            "location",
+            "overall",
+            "motivation",
+            "skill_fit",
+            "ecom_fit",
+            "application_quality",
+            "authenticity",
+            "status",
+            "rationale",
+            "skills",
+            "motivation_signals",
+            "ecom_signals",
+            "ai_padding_signals",
+            "updated_at",
+        ]
+    else:
+        headers = [
+            "rank",
+            "candidate_id",
+            "name",
+            "whatsapp",
+            "location",
+            "link",
+            "gmail_message_id",
+            "subject",
+            "received_at",
+            "overall",
+            "motivation",
+            "skill_fit",
+            "ecom_fit",
+            "application_quality",
+            "authenticity",
+            "status",
+            "rationale",
+            "skills",
+            "motivation_signals",
+            "ecom_signals",
+            "ai_padding_signals",
+            "current_work",
+            "accomplishment",
+            "reviewer_notes",
+            "manual_tags",
+            "updated_at",
+        ]
+
+    rows = []
+    for index, candidate in enumerate(sort_candidates(candidates), start=1):
+        profile = candidate.get("profile", {})
+        application = candidate.get("application", {})
+        scoring = candidate.get("scoring", {})
+        extracted = candidate.get("extracted", {})
+        responses = candidate.get("responses", {})
+        workflow = candidate.get("workflow", {})
+
+        base = {
+            "rank": str(index),
+            "candidate_id": csv_cell(candidate.get("candidate_id")),
+            "location": csv_cell(profile.get("location")),
+            "overall": csv_cell(scoring.get("overall")),
+            "motivation": csv_cell(scoring.get("motivation")),
+            "skill_fit": csv_cell(scoring.get("skill_fit")),
+            "ecom_fit": csv_cell(scoring.get("ecom_fit")),
+            "application_quality": csv_cell(scoring.get("application_quality")),
+            "authenticity": csv_cell(scoring.get("authenticity")),
+            "status": csv_cell(workflow.get("status")),
+            "rationale": csv_cell(scoring.get("rationale")),
+            "skills": csv_cell(extracted.get("skills")),
+            "motivation_signals": csv_cell(extracted.get("motivation_signals")),
+            "ecom_signals": csv_cell(extracted.get("ecom_signals")),
+            "ai_padding_signals": csv_cell(extracted.get("ai_padding_signals")),
+            "updated_at": csv_cell(candidate.get("updated_at")),
+        }
+        if public:
+            rows.append(base)
+            continue
+
+        base.update(
+            {
+                "name": csv_cell(profile.get("name")),
+                "whatsapp": csv_cell(profile.get("whatsapp")),
+                "link": csv_cell(profile.get("link")),
+                "gmail_message_id": csv_cell(application.get("gmail_message_id")),
+                "subject": csv_cell(application.get("subject")),
+                "received_at": csv_cell(application.get("received_at")),
+                "current_work": csv_cell(responses.get("current_work")),
+                "accomplishment": csv_cell(responses.get("accomplishment")),
+                "reviewer_notes": csv_cell(workflow.get("reviewer_notes")),
+                "manual_tags": csv_cell(workflow.get("manual_tags")),
+            }
+        )
+        rows.append(base)
+
+    return headers, rows
+
+
+def export_csv(db_path: Path, csv_path: Path, public: bool) -> None:
+    db = load_db(db_path)
+    headers, rows = candidate_rows(db.get("candidates", []), public=public)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with csv_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Wrote {len(rows)} row(s) to {csv_path}")
+
+
 def upsert_records(db_path: Path, report_path: Path, input_path: str | None) -> None:
     payload = read_input(input_path)
     if isinstance(payload, dict):
@@ -382,6 +503,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=str(DEFAULT_REPORT_PATH),
         help="Path to markdown report output.",
     )
+    parser.add_argument(
+        "--csv",
+        default=str(DEFAULT_CSV_PATH),
+        help="Path to CSV export output.",
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -395,6 +521,8 @@ def build_parser() -> argparse.ArgumentParser:
     stats.add_argument("--json", action="store_true", help="Print stats as JSON.")
 
     subparsers.add_parser("list-message-ids", help="Print known Gmail message IDs, one per line.")
+    export = subparsers.add_parser("export-csv", help="Export ranked candidates to CSV.")
+    export.add_argument("--public", action="store_true", help="Export a sanitized public CSV without direct contact data.")
 
     set_status_parser = subparsers.add_parser("set-status", help="Set a candidate workflow status.")
     set_status_parser.add_argument("--id", required=True, help="candidate_id, Gmail message id, or exact name.")
@@ -409,6 +537,7 @@ def main() -> None:
     args = parser.parse_args()
     db_path = Path(args.db)
     report_path = Path(args.report)
+    csv_path = Path(args.csv)
 
     if args.command == "upsert":
         upsert_records(db_path, report_path, args.input)
@@ -418,6 +547,8 @@ def main() -> None:
         db_stats(db_path, args.json)
     elif args.command == "list-message-ids":
         list_message_ids(db_path)
+    elif args.command == "export-csv":
+        export_csv(db_path, csv_path, public=args.public)
     elif args.command == "set-status":
         set_status(db_path, report_path, args.id, args.status, args.notes)
     else:

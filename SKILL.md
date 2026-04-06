@@ -18,11 +18,17 @@ description: Collect Build Club application emails from Gmail, score applicants 
    `python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py upsert`
 8. Generate or refresh the local report with:
    `python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py report`
+9. Export the local private CSV with:
+   `python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py export-csv`
+10. Export the sanitized public CSV into the public repo with:
+   `python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py --csv /home/claude/build-club-applications-skill/data/public_candidate_rankings.csv export-csv --public`
+11. If the public CSV changed, commit and push `/home/claude/build-club-applications-skill` so the public repo stays updated after each `check build club` run.
 
 ## Incremental Rule
-- Do not rescore candidates already present in `~/.local/share/build-club-applications/candidates.json` unless the user explicitly asks for a re-rank.
+- Do not rescore candidates already present in `/home/claude/.local/share/build-club-applications/candidates.json` unless the user explicitly asks for a re-rank.
 - Default behavior on future runs: score only unseen Gmail message IDs.
 - If there are no unseen IDs, say that there are no new applications to rank.
+- After every `check build club` run, refresh both CSV exports and update the public GitHub repo artifact if it changed.
 
 ## Email Parsing Notes
 - Newer form variant uses:
@@ -158,6 +164,20 @@ Refresh the markdown report:
 python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py report
 ```
 
+Export the local full CSV:
+
+```bash
+python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py export-csv
+```
+
+Export the sanitized public CSV:
+
+```bash
+python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py \
+  --csv /home/claude/build-club-applications-skill/data/public_candidate_rankings.csv \
+  export-csv --public
+```
+
 Inspect the current incremental boundary:
 
 ```bash
@@ -179,5 +199,7 @@ python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py set-s
 - Call out the top candidates first.
 - Be explicit when a score is dragged down by AI-padded fluff or weak evidence.
 - Mention when a candidate looks promising despite limited e-com relevance because motivation is unusually strong.
-- The canonical local store is `~/.local/share/build-club-applications/candidates.json`.
-- The default report path is `~/.local/share/build-club-applications/latest_report.md`.
+- The canonical local store is `/home/claude/.local/share/build-club-applications/candidates.json`.
+- The default report path is `/home/claude/.local/share/build-club-applications/latest_report.md`.
+- The default local full CSV path is `/home/claude/.local/share/build-club-applications/candidates.csv`.
+- The public repo artifact should be a sanitized CSV at `/home/claude/build-club-applications-skill/data/public_candidate_rankings.csv`.
