@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sys
 from copy import deepcopy
@@ -16,6 +17,14 @@ DEFAULT_DB_PATH = DATA_DIR / "candidates.json"
 DEFAULT_REPORT_PATH = DATA_DIR / "latest_report.md"
 DEFAULT_CSV_PATH = DATA_DIR / "candidates.csv"
 SCHEMA_VERSION = 1
+
+
+def public_candidate_id(candidate_id: object) -> str:
+    raw = str(candidate_id or "").strip()
+    if not raw:
+        raw = "candidate"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:10]
+    return f"candidate-{digest}"
 
 
 def utc_now() -> str:
@@ -318,7 +327,11 @@ def candidate_rows(candidates: list[dict], public: bool) -> tuple[list[str], lis
 
         base = {
             "rank": str(index),
-            "candidate_id": csv_cell(candidate.get("candidate_id")),
+            "candidate_id": csv_cell(
+                public_candidate_id(candidate.get("candidate_id"))
+                if public
+                else candidate.get("candidate_id")
+            ),
             "location": csv_cell(profile.get("location")),
             "overall": csv_cell(scoring.get("overall")),
             "motivation": csv_cell(scoring.get("motivation")),

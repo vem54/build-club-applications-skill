@@ -50,7 +50,7 @@ The public repo can publish a sanitized leaderboard at:
 data/public_candidate_rankings.csv
 ```
 
-That CSV is meant for sharing progress and rankings without exposing direct contact fields.
+That CSV is meant for sharing progress and rankings without exposing direct contact fields. Public exports use opaque candidate IDs instead of name-derived IDs.
 
 ## Privacy
 
