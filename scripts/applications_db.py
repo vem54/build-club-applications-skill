@@ -258,6 +258,69 @@ def render_report(db: dict, limit: int = 25) -> str:
     return "\n".join(lines)
 
 
+def compact_text(value: object, max_length: int = 110) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return "No note."
+
+    first_sentence = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0]
+    if len(first_sentence) <= max_length:
+        return first_sentence
+    if len(text) <= max_length:
+        return text
+
+    clipped = text[: max_length - 3].rsplit(" ", 1)[0].rstrip()
+    return (clipped or text[: max_length - 3]) + "..."
+
+
+def render_public_report(db: dict) -> str:
+    ranked_candidates = list(enumerate(sort_candidates(db.get("candidates", [])), start=1))
+    lines = [
+        "# Build Club Public Leaderboard",
+        "",
+        f"Updated: {db.get('updated_at', utc_now())}",
+        f"Candidates: {len(ranked_candidates)}",
+        "Format: `rank | public id | score | location | short note`",
+        "",
+    ]
+
+    if not ranked_candidates:
+        lines.append("No candidates saved yet.")
+        lines.append("")
+        return "\n".join(lines)
+
+    sections = [
+        ("Shortlist (8-10)", lambda score: isinstance(score, int) and score >= 8),
+        ("Strong (7)", lambda score: score == 7),
+        ("Worth A Look (6)", lambda score: score == 6),
+        ("Pass For Now (<=5)", lambda score: isinstance(score, int) and score <= 5),
+        ("Unscored", lambda score: score is None),
+    ]
+
+    for title, include in sections:
+        section_rows = []
+        for rank, candidate in ranked_candidates:
+            score = candidate.get("scoring", {}).get("overall")
+            if include(score):
+                section_rows.append((rank, candidate))
+
+        if not section_rows:
+            continue
+
+        lines.append(f"## {title}")
+        lines.append("")
+        for rank, candidate in section_rows:
+            score = candidate.get("scoring", {}).get("overall")
+            location = candidate.get("profile", {}).get("location") or "Unknown"
+            rationale = compact_text(candidate.get("scoring", {}).get("rationale"))
+            lines.append(
+                f"{rank}. {public_candidate_id(candidate.get('candidate_id'))} | {score if score is not None else '?':>2}/10 | {location} | {rationale}"
+            )
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def csv_cell(value: object) -> str:
     if value is None:
         return ""
@@ -436,6 +499,14 @@ def report_records(db_path: Path, report_path: Path, limit: int) -> None:
     print(report)
 
 
+def public_report_records(db_path: Path, report_path: Path) -> None:
+    db = load_db(db_path)
+    report = render_public_report(db)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report + "\n")
+    print(report)
+
+
 def db_stats(db_path: Path, as_json: bool) -> None:
     db = load_db(db_path)
     candidates = db.get("candidates", [])
@@ -529,6 +600,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     report = subparsers.add_parser("report", help="Render the markdown report.")
     report.add_argument("--limit", type=int, default=25, help="Maximum candidates to include.")
+    subparsers.add_parser(
+        "public-report",
+        help="Render a compact sanitized public markdown leaderboard.",
+    )
 
     stats = subparsers.add_parser("stats", help="Show DB stats for incremental syncs.")
     stats.add_argument("--json", action="store_true", help="Print stats as JSON.")
@@ -556,6 +631,8 @@ def main() -> None:
         upsert_records(db_path, report_path, args.input)
     elif args.command == "report":
         report_records(db_path, report_path, args.limit)
+    elif args.command == "public-report":
+        public_report_records(db_path, report_path)
     elif args.command == "stats":
         db_stats(db_path, args.json)
     elif args.command == "list-message-ids":

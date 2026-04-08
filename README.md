@@ -48,9 +48,10 @@ The public repo can publish a sanitized leaderboard at:
 
 ```text
 data/public_candidate_rankings.csv
+data/public_ranked_report.md
 ```
 
-That CSV is meant for sharing progress and rankings without exposing direct contact fields. Public exports use opaque candidate IDs instead of name-derived IDs.
+The CSV is meant for structured exports. The markdown file is the cleaner public view for humans. Public exports use opaque candidate IDs instead of name-derived IDs.
 
 ## Privacy
 
@@ -80,6 +81,12 @@ Export a sanitized public CSV:
 
 ```bash
 python3 scripts/applications_db.py --csv ./data/public_candidate_rankings.csv export-csv --public
+```
+
+Render a compact public markdown leaderboard:
+
+```bash
+python3 scripts/applications_db.py --report ./data/public_ranked_report.md public-report
 ```
 
 Update a candidate status:
