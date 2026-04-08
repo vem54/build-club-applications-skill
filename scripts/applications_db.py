@@ -280,7 +280,7 @@ def render_public_report(db: dict) -> str:
         "",
         f"Updated: {db.get('updated_at', utc_now())}",
         f"Candidates: {len(ranked_candidates)}",
-        "Format: `rank | public id | score | location | short note`",
+        "Format: `rank | name | score | location | short note`",
         "",
     ]
 
@@ -311,10 +311,13 @@ def render_public_report(db: dict) -> str:
         lines.append("")
         for rank, candidate in section_rows:
             score = candidate.get("scoring", {}).get("overall")
+            name = candidate.get("profile", {}).get("name") or public_candidate_id(
+                candidate.get("candidate_id")
+            )
             location = candidate.get("profile", {}).get("location") or "Unknown"
             rationale = compact_text(candidate.get("scoring", {}).get("rationale"))
             lines.append(
-                f"{rank}. {public_candidate_id(candidate.get('candidate_id'))} | {score if score is not None else '?':>2}/10 | {location} | {rationale}"
+                f"{rank}. {name} | {score if score is not None else '?':>2}/10 | {location} | {rationale}"
             )
         lines.append("")
 

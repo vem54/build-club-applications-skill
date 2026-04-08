@@ -51,7 +51,7 @@ data/public_candidate_rankings.csv
 data/public_ranked_report.md
 ```
 
-The CSV is meant for structured exports. The markdown file is the cleaner public view for humans. Public exports use opaque candidate IDs instead of name-derived IDs.
+The CSV is meant for structured exports and stays anonymized. The markdown file is the cleaner public view for humans.
 
 ## Privacy
 
