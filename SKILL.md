@@ -202,4 +202,4 @@ python3 ~/.codex/skills/build-club-applications/scripts/applications_db.py set-s
 - The canonical local store is `/home/claude/.local/share/build-club-applications/candidates.json`.
 - The default report path is `/home/claude/.local/share/build-club-applications/latest_report.md`.
 - The default local full CSV path is `/home/claude/.local/share/build-club-applications/candidates.csv`.
-- The public repo artifact should be a sanitized CSV at `/home/claude/build-club-applications-skill/data/public_candidate_rankings.csv`.
+- The public repo artifact should be a public CSV at `/home/claude/build-club-applications-skill/data/public_candidate_rankings.csv` with real name, overall rating, rationale, and current work.

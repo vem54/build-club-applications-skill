@@ -44,14 +44,14 @@ By default the helper writes local data to:
 
 These files stay on your machine and are not meant to be committed.
 
-The public repo can publish a sanitized leaderboard at:
+The public repo can publish a public leaderboard at:
 
 ```text
 data/public_candidate_rankings.csv
 data/public_ranked_report.md
 ```
 
-The CSV is meant for structured exports and stays anonymized. The markdown file is the cleaner public view for humans.
+The CSV is meant for a lightweight public export with real names, overall ratings, rationales, and current-work summaries. The markdown file is the cleaner public view for humans.
 
 ## Privacy
 
@@ -77,7 +77,7 @@ Export the full private CSV:
 python3 scripts/applications_db.py export-csv
 ```
 
-Export a sanitized public CSV:
+Export the public CSV:
 
 ```bash
 python3 scripts/applications_db.py --csv ./data/public_candidate_rankings.csv export-csv --public
