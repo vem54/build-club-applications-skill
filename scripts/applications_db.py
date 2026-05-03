@@ -332,25 +332,17 @@ def csv_cell(value: object) -> str:
     return str(value)
 
 
+def single_line_text(value: object) -> str:
+    return " ".join(csv_cell(value).split())
+
+
 def candidate_rows(candidates: list[dict], public: bool) -> tuple[list[str], list[dict[str, str]]]:
     if public:
         headers = [
-            "rank",
-            "candidate_id",
-            "location",
-            "overall",
-            "motivation",
-            "skill_fit",
-            "ecom_fit",
-            "application_quality",
-            "authenticity",
-            "status",
-            "rationale",
-            "skills",
-            "motivation_signals",
-            "ecom_signals",
-            "ai_padding_signals",
-            "updated_at",
+            "Candidate NAME (real name)",
+            "Overall rating",
+            "Rationale",
+            "What this guy actually does",
         ]
     else:
         headers = [
@@ -391,6 +383,23 @@ def candidate_rows(candidates: list[dict], public: bool) -> tuple[list[str], lis
         responses = candidate.get("responses", {})
         workflow = candidate.get("workflow", {})
 
+        if public:
+            current_work = (
+                single_line_text(responses.get("current_work"))
+                or single_line_text(extracted.get("skills"))
+                or single_line_text(responses.get("accomplishment"))
+                or "No current work provided."
+            )
+            rows.append(
+                {
+                    "Candidate NAME (real name)": csv_cell(profile.get("name") or "Unknown Candidate"),
+                    "Overall rating": csv_cell(scoring.get("overall")),
+                    "Rationale": csv_cell(scoring.get("rationale")),
+                    "What this guy actually does": current_work,
+                }
+            )
+            continue
+
         base = {
             "rank": str(index),
             "candidate_id": csv_cell(
@@ -413,10 +422,6 @@ def candidate_rows(candidates: list[dict], public: bool) -> tuple[list[str], lis
             "ai_padding_signals": csv_cell(extracted.get("ai_padding_signals")),
             "updated_at": csv_cell(candidate.get("updated_at")),
         }
-        if public:
-            rows.append(base)
-            continue
-
         base.update(
             {
                 "name": csv_cell(profile.get("name")),
